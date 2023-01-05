@@ -11,10 +11,11 @@
   <body>
     <div id="main"></div>
 
-    <script src="./js/main.js"></script>
+    <script src="./js/cdn/NexusUI.js"></script>
 
-    <script>
-        document.querySelector("#main").innerHTML = HTML_CSS_OP1
+    <script type="module">
+      import { builder } from "./js/main.js";
+      builder("#main");
     </script>
   </body>
 </html>
