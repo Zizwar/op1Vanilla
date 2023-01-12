@@ -1,10 +1,17 @@
 import { HTML_OP1 } from "./js/_html.js";
 import { CSS_OP1 } from "./js/_css.js";
+//
+//import Nexus from "./js/cdn/nexusui/index.js";
 
-export default function (id) {
+export default function ({
+  id,
+  pathSVG = "https://res.cloudinary.com/wino/image/upload/v1673484384/op1/",
+}) {
   const $$ = (id) => document.querySelector(id);
+  const elementsOp = CSS_OP1 + HTML_OP1(pathSVG);
   const innerOp = $$(id);
-  innerOp.innerHTML = CSS_OP1 + HTML_OP1;
+  if (innerOp) innerOp.innerHTML = elementsOp;
+  else document.body.innerHTML += elementsOp;
   //
   const _knobs = ["blue", "green", "orange", "white"];
   //
@@ -69,7 +76,7 @@ export default function (id) {
     highNote: 53,
   });
   Piano.parent.style.position = "absolute";
-  Piano.parent.style.opacity = 0.5;
+  Piano.parent.style.opacity = 0;
 
   Piano.on("change", function ({ note, state }) {
     const id = note - 28;
@@ -101,4 +108,4 @@ export default function (id) {
     Controls[control] = button;
   });
   return { Controls, Piano, Knobs };
-};
+}
