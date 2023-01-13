@@ -1,25 +1,29 @@
 import { HTML_OP1 } from "./js/_html.js";
 import { CSS_OP1 } from "./js/_css.js";
+import { SCREEN_OP1 } from "./js/_screen.js";
 //
 //import Nexus from "./js/cdn/nexusui/index.js";
 
 export default function ({
   id,
-  pathSVG = "https://res.cloudinary.com/wino/image/upload/v1673484384/op1/",
+  pathIconSVG = "https://res.cloudinary.com/wino/image/upload/v1673484384/op1/",
+  screen=SCREEN_OP1(pathIconSVG)
 }) {
   const $$ = (id) => document.querySelector(id);
-  const elementsOp = CSS_OP1 + HTML_OP1(pathSVG);
+  const elementsOp = CSS_OP1 + HTML_OP1({pathIconSVG,screen});
   const innerOp = $$(id);
   if (innerOp) innerOp.innerHTML = elementsOp;
   else document.body.innerHTML += elementsOp;
   //
-  const _knobs = ["blue", "green", "orange", "white"];
+  const _knobs = ["blue", "green", "orange", "white", "volume"];
   //
   const Knobs = [];
   _knobs.forEach((knob) => {
-    const classImprint = `.imprint-${knob}`;
     const idKnobe = `knob-${knob}`;
-    $$(classImprint).style.transform = `rotate(0deg)`;
+
+    const _class = knob === "volume" ? `.${idKnobe}` : `.imprint-${knob}`;
+
+    $$(_class).style.transform = `rotate(0deg)`;
     //
     $$(`.${idKnobe}`).id = idKnobe;
 
@@ -33,11 +37,15 @@ export default function ({
       value: 0,
     }).on("change", (value) => {
       // $$("#display-circle-volume").setAttribute("cy", 100 - value * 100);
-      $$(classImprint).style.transform = `rotate(${value * 360}deg)`;
+      $$(_class).style.transform = `rotate(${value * 360}deg)`;
     });
 
     dial.parent.style.position = "absolute";
     dial.parent.style.opacity = 0;
+    if (knob === "volume") {
+      dial.parent.style.left = "-15px";
+      dial.parent.style.top = "-15px";
+    }
     Knobs[knob] = dial;
   });
   //
@@ -107,5 +115,29 @@ export default function ({
     button.parent.style.opacity = 0.12345;
     Controls[control] = button;
   });
-  return { Controls, Piano, Knobs };
+  // Transports
+  //prepar Element
+  //compatibe Transports style with Button nexus
+  //
+  const _transports =
+    "synthesizer,drum,tape,lift,drop,split,record,play,stop,back,forward,Shift".split(
+      ","
+    );
+
+  document
+    .querySelectorAll(".transports .button-block")
+    .forEach((transport, index) => (transport.id = _transports[index]));
+
+  const Transports = [];
+  _transports.forEach((transport) => {
+    const button = new Nexus.Add.Button(transport, {
+      size: [44, 44],
+      mode: "button",
+      state: false,
+    });
+    button.parent.style.position = "absolute";
+    button.parent.style.opacity = 0.12345;
+    Transports[transport] = button;
+  });
+  return { Transports, Controls, Piano, Knobs };
 }

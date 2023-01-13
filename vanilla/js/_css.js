@@ -203,7 +203,7 @@ export const CSS_OP1 = `
     border-radius: 4px;
   }
 
-  .vol-knob {
+  .knob-volume {
     position: relative;
     width: 44px;
     height: 44px;
@@ -669,6 +669,7 @@ export const CSS_OP1 = `
   }
 
   .right-side-part {
+    z-index: 1;
     display: grid;
     grid-template-columns: 72px;
     grid-template-rows: 1fr;
