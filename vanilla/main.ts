@@ -13,6 +13,6 @@ import {
 
 const app = new Hono();
 
-app.all("*", serveStatic({ root: "./" }));
+app.all("*", serveStatic({ root: "./vanilla" }));
 //
 Deno.serve(app.fetch);
