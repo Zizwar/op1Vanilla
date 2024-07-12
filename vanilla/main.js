@@ -13,14 +13,14 @@ export default function ({
   if (innerOp) innerOp.innerHTML = elementsOp;
   else document.body.innerHTML += elementsOp;
 
-  // Check Web Audio API support
+  // التحقق من دعم Web Audio API
   if (!window.AudioContext && !window.webkitAudioContext) {
-    console.error("Web Audio API is not supported in this browser");
-    alert("Your browser does not support Web Audio API. The synthesizer may not work correctly.");
+    console.error("Web Audio API غير مدعوم في هذا المتصفح");
+    alert("متصفحك لا يدعم Web Audio API. قد لا يعمل السينثيسايزر بشكل صحيح.");
     return;
   }
 
-  // Knobs
+  // إعداد المقابض (Knobs)
   const _knobs = ["blue", "green", "orange", "white", "volume"];
   const Knobs = {};
 
@@ -41,7 +41,8 @@ export default function ({
       value: 0,
     }).on("change", (value) => {
       $$(_class).style.transform = `rotate(${value * 360}deg)`;
-      console.log(`Knob ${knob} value changed to ${value}`);
+      console.log(`تم تغيير قيمة المقبض ${knob} إلى ${value}`);
+      // تطبيق التأثير المناسب بناءً على المقبض
       if (knob === "volume") {
         setVolume(value);
       } else if (knob === "blue") {
@@ -62,7 +63,7 @@ export default function ({
     Knobs[knob] = dial;
   });
 
-  // Piano
+  // إعداد البيانو
   $$(".keyboard").id = "keyboard";
 
   const idKey = [
@@ -87,15 +88,17 @@ export default function ({
     }
   });
 
+  // إنشاء سياق الصوت
   let audioContext;
   try {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
   } catch (e) {
-    console.error("Error creating AudioContext:", e);
-    alert("Failed to create AudioContext. The synthesizer may not work correctly.");
+    console.error("خطأ في إنشاء AudioContext:", e);
+    alert("فشل في إنشاء AudioContext. قد لا يعمل السينثيسايزر بشكل صحيح.");
     return;
   }
 
+  // إعداد عقد الصوت الرئيسية
   const masterGainNode = audioContext.createGain();
   masterGainNode.connect(audioContext.destination);
 
@@ -108,6 +111,7 @@ export default function ({
   filterNode.connect(delayNode);
   delayNode.connect(audioContext.destination);
 
+  // دوال لضبط تأثيرات الصوت
   function setReverbWetness(value) {
     reverbNode.buffer = createReverbImpulse(audioContext, value * 3);
   }
@@ -124,6 +128,7 @@ export default function ({
     masterGainNode.gain.setValueAtTime(value, audioContext.currentTime);
   }
 
+  // دالة لإنشاء تأثير الصدى
   function createReverbImpulse(context, duration) {
     const sampleRate = context.sampleRate;
     const length = sampleRate * duration;
@@ -141,6 +146,7 @@ export default function ({
     return impulse;
   }
 
+  // إنشاء كائن البيانو
   const Piano = new Nexus.Add.Piano("#keyboard", {
     size: [1024, 180],
     mode: "button",
@@ -153,8 +159,9 @@ export default function ({
 
   const oscillators = {};
 
+  // معالجة أحداث الضغط على مفاتيح البيانو
   Piano.on("change", function ({ note, state }) {
-    console.log(`Piano key ${note} ${state ? 'pressed' : 'released'}`);
+    console.log(`مفتاح البيانو ${note} ${state ? 'تم الضغط عليه' : 'تم تحريره'}`);
     const id = note - 28;
     const freq = 440 * Math.pow(2, (note - 69) / 12);
 
@@ -177,7 +184,7 @@ export default function ({
           $$(`#key${id}`).style.backgroundColor = "#369";
         }
       } catch (e) {
-        console.error("Error creating or starting oscillator:", e);
+        console.error("خطأ في إنشاء أو بدء المذبذب:", e);
       }
     } else {
       if (oscillators[note]) {
@@ -188,7 +195,7 @@ export default function ({
           oscillator.stop(audioContext.currentTime + 0.03);
           delete oscillators[note];
         } catch (e) {
-          console.error("Error stopping oscillator:", e);
+          console.error("خطأ في إيقاف المذبذب:", e);
         }
       }
 
@@ -198,7 +205,7 @@ export default function ({
     }
   });
 
-  // Controls
+  // إعداد أزرار التحكم
   const _controls = "mixer,t1,t2,t3,t4,s1,s2,s3,s4,s5,s6,s7,s8,sequencer".split(",");
 
   document
@@ -212,7 +219,7 @@ export default function ({
       mode: "button",
       state: false,
     }).on('change', function(v) {
-      console.log(`Control ${control} ${v ? 'pressed' : 'released'}`);
+      console.log(`زر التحكم ${control} ${v ? 'تم الضغط عليه' : 'تم تحريره'}`);
       if (v) {
         if (control === 't1') changePianoType('sine');
         else if (control === 't2') changePianoType('square');
@@ -226,14 +233,15 @@ export default function ({
     Controls[control] = button;
   });
 
+  // دالة لتغيير نوع موجة البيانو
   function changePianoType(type) {
-    console.log(`Changing piano type to ${type}`);
+    console.log(`تغيير نوع موجة البيانو إلى ${type}`);
     Object.values(oscillators).forEach(({ oscillator }) => {
       oscillator.type = type;
     });
   }
 
-  // Transports
+  // إعداد أزرار النقل
   const _transports = "synthesizer,drum,tape,lift,drop,split,record,play,stop,back,forward,Shift".split(",");
 
   document
@@ -247,13 +255,13 @@ export default function ({
       mode: "button",
       state: false,
     }).on('change', function(v) {
-      console.log(`Transport ${transport} ${v ? 'pressed' : 'released'}`);
+      console.log(`زر النقل ${transport} ${v ? 'تم الضغط عليه' : 'تم تحريره'}`);
     });
     button.parent.style.position = "absolute";
     button.parent.style.opacity = 0.12345;
     Transports[transport] = button;
   });
 
-  console.log("OP-1 Synthesizer initialized");
+  console.log("تم تهيئة سينثيسايزر OP-1");
   return { Transports, Controls, Piano, Knobs };
 }
