@@ -13,14 +13,69 @@ export default function ({
   if (innerOp) innerOp.innerHTML = elementsOp;
   else document.body.innerHTML += elementsOp;
 
-  // التحقق من دعم Web Audio API
   if (!window.AudioContext && !window.webkitAudioContext) {
     console.error("Web Audio API غير مدعوم في هذا المتصفح");
     alert("متصفحك لا يدعم Web Audio API. قد لا يعمل السينثيسايزر بشكل صحيح.");
     return;
   }
 
-  // إعداد المقابض (Knobs)
+  let audioContext;
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {
+    console.error("خطأ في إنشاء AudioContext:", e);
+    alert("فشل في إنشاء AudioContext. قد لا يعمل السينثيسايزر بشكل صحيح.");
+    return;
+  }
+
+  const masterGainNode = audioContext.createGain();
+  masterGainNode.connect(audioContext.destination);
+
+  const reverbNode = audioContext.createConvolver();
+  const filterNode = audioContext.createBiquadFilter();
+  const delayNode = audioContext.createDelay(5.0);
+
+  masterGainNode.connect(reverbNode);
+  reverbNode.connect(filterNode);
+  filterNode.connect(delayNode);
+  delayNode.connect(audioContext.destination);
+
+  // Set initial volume
+  masterGainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+
+  function setReverbWetness(value) {
+    reverbNode.buffer = createReverbImpulse(audioContext, value * 3);
+  }
+
+  function setFilterCutoff(value) {
+    filterNode.frequency.setValueAtTime(value * 10000 + 100, audioContext.currentTime);
+  }
+
+  function setDelay(value) {
+    delayNode.delayTime.setValueAtTime(value * 0.5, audioContext.currentTime);
+  }
+
+  function setVolume(value) {
+    masterGainNode.gain.setValueAtTime(value, audioContext.currentTime);
+  }
+
+  function createReverbImpulse(context, duration) {
+    const sampleRate = context.sampleRate;
+    const length = sampleRate * duration;
+    const impulse = context.createBuffer(2, length, sampleRate);
+    const leftChannel = impulse.getChannelData(0);
+    const rightChannel = impulse.getChannelData(1);
+
+    for (let i = 0; i < length; i++) {
+      const t = i / sampleRate;
+      const amplitude = Math.exp(-t * 3) * Math.random() * 0.5;
+      leftChannel[i] = amplitude * (Math.random() * 2 - 1);
+      rightChannel[i] = amplitude * (Math.random() * 2 - 1);
+    }
+
+    return impulse;
+  }
+
   const _knobs = ["blue", "green", "orange", "white", "volume"];
   const Knobs = {};
 
@@ -38,11 +93,10 @@ export default function ({
       min: 0,
       max: 1,
       step: 0,
-      value: 0,
+      value: knob === "volume" ? 0.5 : 0,
     }).on("change", (value) => {
       $$(_class).style.transform = `rotate(${value * 360}deg)`;
       console.log(`تم تغيير قيمة المقبض ${knob} إلى ${value}`);
-      // تطبيق التأثير المناسب بناءً على المقبض
       if (knob === "volume") {
         setVolume(value);
       } else if (knob === "blue") {
@@ -63,7 +117,6 @@ export default function ({
     Knobs[knob] = dial;
   });
 
-  // إعداد البيانو
   $$(".keyboard").id = "keyboard";
 
   const idKey = [
@@ -88,91 +141,70 @@ export default function ({
     }
   });
 
-  // إنشاء سياق الصوت
-  let audioContext;
-  try {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  } catch (e) {
-    console.error("خطأ في إنشاء AudioContext:", e);
-    alert("فشل في إنشاء AudioContext. قد لا يعمل السينثيسايزر بشكل صحيح.");
-    return;
-  }
-
-  // إعداد عقد الصوت الرئيسية
-  const masterGainNode = audioContext.createGain();
-  masterGainNode.connect(audioContext.destination);
-
-  const reverbNode = audioContext.createConvolver();
-  const filterNode = audioContext.createBiquadFilter();
-  const delayNode = audioContext.createDelay(5.0);
-
-  masterGainNode.connect(reverbNode);
-  reverbNode.connect(filterNode);
-  filterNode.connect(delayNode);
-  delayNode.connect(audioContext.destination);
-
-  // دوال لضبط تأثيرات الصوت
-  function setReverbWetness(value) {
-    reverbNode.buffer = createReverbImpulse(audioContext, value * 3);
-  }
-
-  function setFilterCutoff(value) {
-    filterNode.frequency.setValueAtTime(value * 10000 + 100, audioContext.currentTime);
-  }
-
-  function setDelay(value) {
-    delayNode.delayTime.setValueAtTime(value * 0.5, audioContext.currentTime);
-  }
-
-  function setVolume(value) {
-    masterGainNode.gain.setValueAtTime(value, audioContext.currentTime);
-  }
-
-  // دالة لإنشاء تأثير الصدى
-  function createReverbImpulse(context, duration) {
-    const sampleRate = context.sampleRate;
-    const length = sampleRate * duration;
-    const impulse = context.createBuffer(2, length, sampleRate);
-    const leftChannel = impulse.getChannelData(0);
-    const rightChannel = impulse.getChannelData(1);
-
-    for (let i = 0; i < length; i++) {
-      const t = i / sampleRate;
-      const amplitude = Math.exp(-t * 3) * Math.random() * 0.5;
-      leftChannel[i] = amplitude * (Math.random() * 2 - 1);
-      rightChannel[i] = amplitude * (Math.random() * 2 - 1);
-    }
-
-    return impulse;
-  }
-
-  // إنشاء كائن البيانو
   const Piano = new Nexus.Add.Piano("#keyboard", {
     size: [1024, 180],
     mode: "button",
-    lowNote: 29,
-    highNote: 53,
+    lowNote: 48,
+    highNote: 72,
   });
 
   Piano.parent.style.position = "absolute";
   Piano.parent.style.opacity = 0;
 
   const oscillators = {};
+  let currentInstrument = 'piano';
 
-  // معالجة أحداث الضغط على مفاتيح البيانو
+  const instrumentSettings = {
+    piano: { type: 'triangle', attack: 0.005, decay: 3, sustain: 0.1, release: 0.1 },
+    violin: { type: 'sawtooth', attack: 0.1, decay: 0.3, sustain: 0.8, release: 0.2 },
+    guitar: { type: 'square', attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 },
+    flute: { type: 'sine', attack: 0.05, decay: 0.2, sustain: 0.7, release: 0.1 },
+    trumpet: { type: 'sawtooth', attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.1 },
+    clarinet: { type: 'triangle', attack: 0.05, decay: 0.1, sustain: 0.8, release: 0.1 },
+    harp: { type: 'triangle', attack: 0.001, decay: 2.5, sustain: 0.1, release: 0.1 },
+    xylophone: { type: 'sine', attack: 0.001, decay: 0.5, sustain: 0, release: 0.001 }
+  };
+
+  function changeInstrument(instrumentType) {
+    console.log(`تغيير نوع الآلة إلى ${instrumentType}`);
+    currentInstrument = instrumentType;
+    
+    // Update filter settings based on the instrument
+    const settings = instrumentSettings[instrumentType];
+    filterNode.type = 'lowpass';
+    filterNode.frequency.setValueAtTime(5000, audioContext.currentTime); // Default cutoff
+    filterNode.Q.setValueAtTime(1, audioContext.currentTime); // Default resonance
+
+    if (instrumentType === 'trumpet' || instrumentType === 'clarinet') {
+      filterNode.type = 'bandpass';
+      filterNode.frequency.setValueAtTime(2000, audioContext.currentTime);
+      filterNode.Q.setValueAtTime(5, audioContext.currentTime);
+    } else if (instrumentType === 'xylophone') {
+      filterNode.type = 'highpass';
+      filterNode.frequency.setValueAtTime(2000, audioContext.currentTime);
+    }
+
+    // Update reverb settings
+    const reverbDuration = instrumentType === 'piano' || instrumentType === 'harp' ? 2 : 1;
+    setReverbWetness(reverbDuration / 3); // Normalize to 0-1 range
+  }
+
   Piano.on("change", function ({ note, state }) {
     console.log(`مفتاح البيانو ${note} ${state ? 'تم الضغط عليه' : 'تم تحريره'}`);
-    const id = note - 28;
     const freq = 440 * Math.pow(2, (note - 69) / 12);
 
     if (state) {
       try {
         const oscillator = audioContext.createOscillator();
-        oscillator.type = "sine";
+        const gainNode = audioContext.createGain();
+        const settings = instrumentSettings[currentInstrument];
+
+        oscillator.type = settings.type;
         oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
 
-        const gainNode = audioContext.createGain();
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + settings.attack);
+        gainNode.gain.linearRampToValueAtTime(settings.sustain * 0.5, audioContext.currentTime + settings.attack + settings.decay);
 
         oscillator.connect(gainNode);
         gainNode.connect(masterGainNode);
@@ -180,6 +212,7 @@ export default function ({
         oscillator.start();
         oscillators[note] = { oscillator, gainNode };
 
+        const id = note - 47;
         if ($$(`#key${id}`)) {
           $$(`#key${id}`).style.backgroundColor = "#369";
         }
@@ -190,22 +223,27 @@ export default function ({
       if (oscillators[note]) {
         try {
           const { oscillator, gainNode } = oscillators[note];
+          const settings = instrumentSettings[currentInstrument];
+          
           gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.03);
-          oscillator.stop(audioContext.currentTime + 0.03);
-          delete oscillators[note];
+          gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + settings.release);
+          oscillator.stop(audioContext.currentTime + settings.release);
+          
+          setTimeout(() => {
+            delete oscillators[note];
+          }, settings.release * 1000);
+
+          const id = note - 47;
+          if ($$(`#key${id}`)) {
+            $$(`#key${id}`).style.backgroundColor = "#d1d7e0";
+          }
         } catch (e) {
           console.error("خطأ في إيقاف المذبذب:", e);
         }
       }
-
-      if ($$(`#key${id}`)) {
-        $$(`#key${id}`).style.backgroundColor = "#d1d7e0";
-      }
     }
   });
 
-  // إعداد أزرار التحكم
   const _controls = "mixer,t1,t2,t3,t4,s1,s2,s3,s4,s5,s6,s7,s8,sequencer".split(",");
 
   document
@@ -221,10 +259,10 @@ export default function ({
     }).on('change', function(v) {
       console.log(`زر التحكم ${control} ${v ? 'تم الضغط عليه' : 'تم تحريره'}`);
       if (v) {
-        if (control === 't1') changePianoType('sine');
-        else if (control === 't2') changePianoType('square');
-        else if (control === 't3') changePianoType('sawtooth');
-        else if (control === 't4') changePianoType('triangle');
+        if (control.startsWith('s')) {
+          const instrumentType = ['piano', 'violin', 'guitar', 'flute', 'trumpet', 'clarinet', 'harp', 'xylophone'][parseInt(control[1]) - 1];
+          changeInstrument(instrumentType);
+        }
       }
     });
 
@@ -233,15 +271,6 @@ export default function ({
     Controls[control] = button;
   });
 
-  // دالة لتغيير نوع موجة البيانو
-  function changePianoType(type) {
-    console.log(`تغيير نوع موجة البيانو إلى ${type}`);
-    Object.values(oscillators).forEach(({ oscillator }) => {
-      oscillator.type = type;
-    });
-  }
-
-  // إعداد أزرار النقل
   const _transports = "synthesizer,drum,tape,lift,drop,split,record,play,stop,back,forward,Shift".split(",");
 
   document
@@ -256,11 +285,15 @@ export default function ({
       state: false,
     }).on('change', function(v) {
       console.log(`زر النقل ${transport} ${v ? 'تم الضغط عليه' : 'تم تحريره'}`);
+      // Implement transport controls functionality here
     });
     button.parent.style.position = "absolute";
     button.parent.style.opacity = 0.12345;
     Transports[transport] = button;
   });
+
+  // Initialize with piano sound
+  changeInstrument('piano');
 
   console.log("تم تهيئة سينثيسايزر OP-1");
   return { Transports, Controls, Piano, Knobs };
